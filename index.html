@@ -39,11 +39,29 @@
     background: var(--bg);
     color: var(--text);
     font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Segoe UI", sans-serif;
-    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
-             calc(24px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 24px;
+    padding-top: 40px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(env(safe-area-inset-top, 0px) + 24px);
+  }
+  /* 主屏幕 Web App（无浏览器工具栏）时顶部再多留一段，避开状态栏/模糊遮罩 */
+  @media (display-mode: standalone) {
+    body {
+      padding-top: 56px;
+      padding-top: calc(env(safe-area-inset-top, 0px) + 44px);
+    }
+  }
+  /* iOS 旧版 Safari 不支持上面的媒体查询，用 JS 打的 class 兜底 */
+  html.standalone body {
+    padding-top: 56px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 44px);
   }
   main { max-width: 720px; margin: 0 auto; }
-  h1 { font-size: 19px; margin: 8px 4px 16px; letter-spacing: .2px; }
+  h1 { font-size: 19px; margin: 0 4px 16px; letter-spacing: .2px; }
   h1 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
   .card {
     background: var(--card);
@@ -131,6 +149,27 @@
     color: var(--text);
     font-weight: 600;
     word-break: break-all;
+  }
+  .item.zero { border-color: var(--err); }
+  .item.zero .fname { color: var(--err); }
+  .item.zero .sub b { color: var(--err); }
+  .code.zero {
+    color: var(--err);
+    background: rgba(209, 51, 46, .08);
+    border-color: rgba(209, 51, 46, .3);
+    background: color-mix(in srgb, var(--err) 8%, transparent);
+    border-color: color-mix(in srgb, var(--err) 30%, transparent);
+  }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--err);
+    border: 1px solid color-mix(in srgb, var(--err) 40%, transparent);
+    border-radius: 999px;
+    padding: 0 8px;
+    margin-left: 6px;
+    vertical-align: 1px;
   }
   .empty { font-size: 13px; color: var(--muted); text-align: center; padding: 14px 0 4px; }
   .drop { outline: 2px dashed var(--accent); outline-offset: 4px; }
@@ -270,6 +309,12 @@ c.mode.CTRGladman=function(){var t=c.lib.BlockCipherMode.extend();function e(t){
     return genKey(fromHex(clean));
   }
 
+  // 序列号后半段（后 4 字节）全为 0
+  function isZeroTail(hex) {
+    var h = String(hex || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+    return h.length === 16 && h.slice(8) === '00000000';
+  }
+
   // ---------- ZIP ----------
   function u16(dv, o) { return dv.getUint16(o, true); }
   function u32(dv, o) { return dv.getUint32(o, true); }
@@ -349,6 +394,7 @@ c.mode.CTRGladman=function(){var t=c.lib.BlockCipherMode.extend();function e(t){
     serialFromLic: serialFromLic,
     genKeyFromLic: genKeyFromLic,
     genKeyFromHex: genKeyFromHex,
+    isZeroTail: isZeroTail,
     readZip: readZip,
     isLicEntry: isLicEntry,
     readZipLicenses: readZipLicenses,
@@ -357,6 +403,13 @@ c.mode.CTRGladman=function(){var t=c.lib.BlockCipherMode.extend();function e(t){
 
   // ---------- UI ----------
   if (typeof document === 'undefined') return;
+
+  var standalone = false;
+  try {
+    standalone = navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  } catch (e) { /* ignore */ }
+  if (standalone) document.documentElement.classList.add('standalone');
 
   var $ = function (id) { return document.getElementById(id); };
   var listEl = $('list');
@@ -404,7 +457,8 @@ c.mode.CTRGladman=function(){var t=c.lib.BlockCipherMode.extend();function e(t){
     var ok = 0;
     rows.forEach(function (row) {
       var item = document.createElement('div');
-      item.className = 'item';
+      var zero = !row.error && isZeroTail(row.info);
+      item.className = zero ? 'item zero' : 'item';
 
       var name = document.createElement('div');
       name.className = 'fname';
@@ -432,6 +486,12 @@ c.mode.CTRGladman=function(){var t=c.lib.BlockCipherMode.extend();function e(t){
         b.title = '点击复制';
         b.addEventListener('click', function () { copyText(row.info); });
         sub.appendChild(b);
+        if (zero) {
+          var tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = '后半段为 0';
+          sub.appendChild(tag);
+        }
         item.appendChild(sub);
         ok++;
       }
@@ -503,7 +563,9 @@ c.mode.CTRGladman=function(){var t=c.lib.BlockCipherMode.extend();function e(t){
       serialErr.hidden = true;
       if (!raw) return;
       try {
-        serialLic.textContent = genKeyFromHex(raw).lic;
+        var k = genKeyFromHex(raw);
+        serialLic.textContent = k.lic;
+        serialLic.classList.toggle('zero', isZeroTail(k.info));
         serialOut.hidden = false;
       } catch (e) {
         serialErr.textContent = e.message;

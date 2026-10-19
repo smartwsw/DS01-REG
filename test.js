@@ -31,6 +31,12 @@ function check(name, actual, expected) {
 check('serial input', t.genKeyFromHex('000806ECD2928D43').lic, EXPECT.lic);
 check('serial input (with dashes)', t.genKeyFromHex('00-08-06-EC-D2-92-8D-43').lic, EXPECT.lic);
 
+// 1.1 后半段为 0 的识别
+check('zero tail detect', String(t.isZeroTail('000806EC00000000')), 'true');
+check('zero tail detect (dashes)', String(t.isZeroTail('00-08-06-EC-00-00-00-00')), 'true');
+check('zero tail detect (normal serial)', String(t.isZeroTail('000806ECD2928D43')), 'false');
+check('zero tail key info', t.genKeyFromHex('000806EC00000000').info, '000806EC00000000');
+
 // 2. 从 .lic 文件读取
 const licBuf = fs.readFileSync(__dirname + '/../DS01.lic');
 const fromFile = t.genKeyFromLic(licBuf.buffer.slice(licBuf.byteOffset, licBuf.byteOffset + licBuf.byteLength));
