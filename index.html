@@ -20,6 +20,7 @@
     --line: #e3e5ea;
     --accent: #2f6fed;
     --err: #d1332e;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Cascadia Mono", "Liberation Mono", monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -73,7 +74,9 @@
   label.field { display: block; font-size: 13px; color: var(--muted); margin: 0 2px 8px; }
   input[type=text] {
     width: 100%;
-    font: 16px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    font: 16px/1.4 var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "zero" 1;
     letter-spacing: .5px;
     color: var(--text);
     background: transparent;
@@ -89,7 +92,9 @@
     display: block;
     width: 100%;
     text-align: left;
-    font: 600 17px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+    font: 600 17px/1.45 var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "zero" 1;
     letter-spacing: .6px;
     color: var(--text);
     background: rgba(47, 111, 237, .08);
@@ -145,9 +150,9 @@
   .item .code { font-size: 15px; padding: 8px 10px; }
   .item .sub { margin-top: 8px; margin-bottom: 0; }
   .item .sub b {
-    font: 500 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    font: 600 12px/1.4 var(--mono);
     color: var(--text);
-    font-weight: 600;
+    letter-spacing: .3px;
     word-break: break-all;
   }
   .item.zero { border-color: var(--err); }
